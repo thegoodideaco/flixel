@@ -1,15 +1,16 @@
 package flixel.system.debug.interaction;
 
-import flash.display.Bitmap;
 import flash.display.BitmapData;
 import flash.display.Graphics;
 import flash.display.Sprite;
+import flash.display.DisplayObject;
 import flash.events.KeyboardEvent;
 import flixel.FlxObject;
 import flash.events.MouseEvent;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.input.FlxPointer;
 import flixel.math.FlxPoint;
+import flixel.math.FlxRect;
 import flixel.system.debug.FlxDebugger.GraphicInteractive;
 import flixel.system.debug.Window;
 import flixel.system.debug.interaction.tools.Eraser;
@@ -20,8 +21,12 @@ import flixel.system.ui.FlxSystemButton;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.FlxSpriteUtil;
 
+#if !(FLX_NATIVE_CURSOR && FLX_MOUSE)
+import flash.display.Bitmap;
+#end
+
 /**
- * Adds a new funcionality to Flixel debugger that allows any object
+ * Adds a new functionality to Flixel debugger that allows any object
  * on the screen to be dragged, moved or deleted while the game is
  * still running.
  * 
@@ -41,7 +46,7 @@ class Interaction extends Window
 	private var _customCursor:Sprite;
 	private var _tools:Array<Tool> = [];
 	private var _turn:Int = 2;
-	private var _keysDown:Map<Int, Int> = new Map();
+	private var _keysDown:Map<Int, Bool> = new Map();
 	private var _keysUp:Map<Int, Int> = new Map();
 	private var _wasMouseVisible:Bool;
 	private var _wasUsingSystemCursor:Bool;
@@ -86,6 +91,11 @@ class Interaction extends Window
 	
 	private function updateMouse(event:MouseEvent):Void
 	{
+		#if (neko || js) // openfl/openfl#1305
+		if (event.stageX == null || event.stageY == null)
+			return;
+		#end
+
 		var offsetX = 0.0;
 		var offsetY = 0.0;
 		
@@ -117,9 +127,9 @@ class Interaction extends Window
 	
 	private function handleMouseClick(event:MouseEvent):Void 
 	{
-		// Did the user click a debugger icon instead of performing
+		// Did the user click a debugger UI element instead of performing
 		// a click related to a tool?
-		if (Std.is(event.target, FlxSystemButton))
+		if (event.type == MouseEvent.MOUSE_DOWN && belongsToDebugger(event.target))
 			return;
 		
 		pointerJustPressed = event.type == MouseEvent.MOUSE_DOWN;
@@ -129,6 +139,15 @@ class Interaction extends Window
 			pointerPressed = true;
 		else if (pointerJustReleased)
 			pointerPressed = false;
+	}
+
+	private function belongsToDebugger(object:DisplayObject):Bool
+	{
+		if (object == null)
+			return false;
+		else if (Std.is(object, FlxDebugger))
+			return true;
+		return belongsToDebugger(object.parent);
 	}
 	
 	private function handleMouseInDebugger(event:MouseEvent):Void 
@@ -149,9 +168,12 @@ class Interaction extends Window
 	private function handleKeyEvent(event:KeyboardEvent):Void
 	{
 		if (event.type == KeyboardEvent.KEY_DOWN)
-			_keysDown.set(event.keyCode, _turn);
+			_keysDown.set(event.keyCode, true);
 		else if (event.type == KeyboardEvent.KEY_UP)
+		{
+			_keysDown.set(event.keyCode, false);
 			_keysUp.set(event.keyCode, _turn);
+		}
 	}
 	
 	private function addTool(tool:Tool):Void
@@ -239,7 +261,7 @@ class Interaction extends Window
 		drawItemsSelection();
 	}
 	
-	private function getDebugGraphics():Graphics
+	public function getDebugGraphics():Graphics
 	{
 		if (FlxG.renderBlit)
 		{
@@ -265,7 +287,7 @@ class Interaction extends Window
 			if (member != null && member.scrollFactor != null && member.isOnScreen())
 			{
 				// Render a red rectangle centered at the selected item
-				gfx.lineStyle(1.5, 0xff0000);
+				gfx.lineStyle(0.9, 0xff0000);
 				gfx.drawRect(member.x - FlxG.camera.scroll.x,
 					member.y - FlxG.camera.scroll.y,
 					member.width * 1.0, member.height * 1.0);
@@ -303,7 +325,7 @@ class Interaction extends Window
 			return;
 	
 		#if (FLX_NATIVE_CURSOR && FLX_MOUSE)
-		FlxG.mouse.setSimpleNativeCursorData(name, icon);
+		FlxG.mouse.registerSimpleNativeCursorData(name, icon);
 		#else
 		var sprite = new Sprite();
 		sprite.visible = false;
@@ -366,7 +388,7 @@ class Interaction extends Window
 	private function restoreSystemCursor():Void
 	{
 		#if FLX_MOUSE
-		FlxG.mouse.useSystemCursor = _wasUsingSystemCursor;		
+		FlxG.mouse.useSystemCursor = _wasUsingSystemCursor;
 		FlxG.mouse.visible = _wasMouseVisible;
 		_customCursor.visible = false;
 		#end
@@ -434,13 +456,50 @@ class Interaction extends Window
 	
 	public function keyPressed(key:Int):Bool
 	{
-		var value:Int = _keysDown.get(key) == null ? 0 : _keysDown.get(key);
-		return _turn <= value;
+		return _keysDown.get(key);
 	}
 	
 	public function keyJustPressed(key:Int):Bool
 	{
 		var value:Int = _keysUp.get(key) == null ? 0 : _keysUp.get(key);
 		return (_turn - value) == 1;
+	}
+	
+	public function findItemsWithinState(items:Array<FlxBasic>, state:FlxState, area:FlxRect):Void
+	{
+		findItemsWithinArea(items, state.members, area);
+		if (state.subState != null)
+			findItemsWithinState(items, state.subState, area);
+	}
+
+	/**
+	 * Find all items within an area. In order to improve performance and reduce temporary allocations,
+	 * the method has no return, you must pass an array where items will be placed. The method decides
+	 * if an item is within the searching area or not by checking if the item's hitbox (obtained from
+	 * `getHitbox()`) overlaps the area parameter.
+	 * 
+	 * @param	items		array where the method will place all found items. Any previous content in the array will be preserved.
+	 * @param	members		array where the method will recursively search for items.
+	 * @param	area		a rectangle that describes the area where the method should search within.
+	 */
+	@:access(flixel.group.FlxTypedGroup)
+	public function findItemsWithinArea(items:Array<FlxBasic>, members:Array<FlxBasic>, area:FlxRect):Void
+	{
+		// we iterate backwards to get the sprites on top first
+		var i = members.length;
+		while (i-- > 0)
+		{
+			var member = members[i];
+			// Ignore invisible or non-existent entities
+			if (member == null || !member.visible || !member.exists)
+				continue;
+
+			var group = FlxTypedGroup.resolveGroup(member);
+			if (group != null)
+				findItemsWithinArea(items, group.members, area);
+			else if (Std.is(member, FlxSprite) &&
+				area.overlaps(cast(member, FlxSprite).getHitbox()))
+				items.push(cast member);
+		}
 	}
 }

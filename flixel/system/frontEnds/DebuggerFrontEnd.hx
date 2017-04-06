@@ -22,9 +22,9 @@ class DebuggerFrontEnd
 	#if FLX_KEYBOARD
 	/**
 	 * The key codes used to toggle the debugger (see FlxG.keys for the keys available).
-	 * Default keys: ` and \. Set to null to deactivate.
+	 * Default keys: F2, ` and \. Set to null to deactivate.
 	 */
-	public var toggleKeys:Array<FlxKey> = [GRAVEACCENT, BACKSLASH];
+	public var toggleKeys:Array<FlxKey> = [F2, GRAVEACCENT, BACKSLASH];
 	#end
 	
 	/**
@@ -37,6 +37,7 @@ class DebuggerFrontEnd
 	public var drawDebugChanged(default, null):FlxSignal = new FlxSignal();
 	/**
 	 * Dispatched when `visible` is changed.
+	 * @since 4.1.0
 	 */
 	public var visibilityChanged(default, null):FlxSignal = new FlxSignal();
 	
@@ -149,6 +150,7 @@ class DebuggerFrontEnd
 		return drawDebug;
 	}
 	
+	@:access(flixel.FlxGame.onFocus)
 	private function set_visible(Value:Bool):Bool
 	{
 		if (visible == Value)
@@ -163,8 +165,9 @@ class DebuggerFrontEnd
 		// so the game still will be able to capture key presses
 		if (!Value)
 		{
-			FlxG.stage.stageFocusRect = false; // don't show yellow focus rect on flash
-			FlxG.stage.focus = FlxG.game;
+			FlxG.stage.focus = null;
+			// setting focus to null will trigger a focus lost event, let's undo that
+			FlxG.game.onFocus(null);
 		}
 		
 		visibilityChanged.dispatch();

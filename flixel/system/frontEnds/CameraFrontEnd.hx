@@ -20,10 +20,13 @@ class CameraFrontEnd
 	 */
 	public var bgColor(get, set):FlxColor;
 	
+	/** @since 4.2.0 */
 	public var cameraAdded(default, null):FlxTypedSignal<FlxCamera->Void> = new FlxTypedSignal<FlxCamera->Void>();
 	
+	/** @since 4.2.0 */
 	public var cameraRemoved(default, null):FlxTypedSignal<FlxCamera->Void> = new FlxTypedSignal<FlxCamera->Void>();
 	
+	/** @since 4.2.0 */
 	public var cameraResized(default, null):FlxTypedSignal<FlxCamera->Void> = new FlxTypedSignal<FlxCamera->Void>();
 	
 	/**
@@ -94,11 +97,9 @@ class CameraFrontEnd
 	 */
 	public function reset(?NewCamera:FlxCamera):Void
 	{
-		for (camera in list)
-			remove(camera);
-		
-		list.splice(0, list.length);
-		
+		while (list.length > 0)
+			remove(list[0]);
+
 		if (NewCamera == null)
 			NewCamera = new FlxCamera(0, 0, FlxG.width, FlxG.height);
 		

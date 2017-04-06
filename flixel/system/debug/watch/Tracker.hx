@@ -16,7 +16,6 @@ import flixel.group.FlxSpriteGroup;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.input.gamepad.FlxGamepad;
 import flixel.input.mouse.FlxMouse;
-import flixel.input.touch.FlxTouch;
 import flixel.input.FlxSwipe;
 import flixel.text.FlxText;
 import flixel.tile.FlxTilemap;
@@ -28,7 +27,9 @@ import flixel.math.FlxPoint;
 import flixel.math.FlxRect;
 import flixel.util.FlxTimer;
 import flixel.animation.FlxAnimationController;
-using flixel.util.FlxArrayUtil;
+#if FLX_TOUCH
+import flixel.input.touch.FlxTouch;
+#end
 #end
 
 import flixel.util.FlxStringUtil;
@@ -84,7 +85,7 @@ class Tracker extends Watch
 			
 			addProfile(new TrackerProfile(FlxG,
 				["width", "height", "worldBounds.x", "worldBounds.y", "worldBounds.width", "worldBounds.height", 
-				"worldDivisions", "updateFramerate", "drawFramerate", "elapsed", "maxElapsed", "autoPause", "fixedTimestep", "timeScale"]));
+					"worldDivisions", "updateFramerate", "drawFramerate", "elapsed", "maxElapsed", "autoPause", "fixedTimestep", "timeScale"]));
 			
 			addProfile(new TrackerProfile(FlxPoint, ["x", "y"]));
 			addProfile(new TrackerProfile(FlxRect, ["width", "height"], [FlxPoint]));
@@ -119,8 +120,8 @@ class Tracker extends Watch
 			#if FLX_MOUSE
 			addProfile(new TrackerProfile(FlxMouse,
 				["screenX", "screenY", "wheel", "visible", "useSystemCursor", "pressed", "justPressed",
-				"justReleased" #if FLX_MOUSE_ADVANCED , "pressedMiddle", "justPressedMiddle",
-				"justReleasedMiddle", "pressedRight", "justPressedRight", "justReleasedRight" #end], [FlxPoint]));
+					"justReleased" #if FLX_MOUSE_ADVANCED , "pressedMiddle", "justPressedMiddle",
+					"justReleasedMiddle", "pressedRight", "justPressedRight", "justReleasedRight" #end], [FlxPoint]));
 			#end
 			#if FLX_TOUCH 
 			addProfile(new TrackerProfile(FlxTouch, ["screenX", "screenY", "touchPointID", "pressed", "justPressed", "justReleased", "isActive"], [FlxPoint]));

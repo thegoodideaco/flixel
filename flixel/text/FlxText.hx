@@ -16,16 +16,16 @@ import flixel.graphics.frames.FlxFramesCollection;
 import flixel.math.FlxMath;
 import flixel.math.FlxPoint;
 import flixel.system.FlxAssets;
-import flixel.text.FlxText.FlxTextBorderStyle;
-import flixel.text.FlxText.FlxTextFormat;
 import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.helpers.FlxRange;
 import openfl.Assets;
 import haxe.Utf8;
-import openfl.geom.Rectangle;
 using flixel.util.FlxStringUtil;
-using StringTools;
+
+#if flash
+import openfl.geom.Rectangle;
+#end
 
 // TODO: think about filters and text
 
@@ -177,7 +177,7 @@ class FlxText extends FlxSprite
 		if (Text == null || Text == "")
 		{
 			// empty texts have a textHeight of 0, need to
-			// prevent initialiazing with "" before the first calcFrame() call
+			// prevent initializing with "" before the first calcFrame() call
 			text = "";
 			Text = " ";
 		}
@@ -304,7 +304,6 @@ class FlxText extends FlxSprite
 			// inspect each character
 			for (charIndex in 0...Utf8.length(input))
 			{
-				var charCode = Utf8.charCodeAt(input, charIndex);
 				if (Utf8.compare(Utf8.sub(input, charIndex, markerLength), rule.marker) != 0)
 					continue; // it's not one of the markers
 
@@ -441,17 +440,17 @@ class FlxText extends FlxSprite
 	 * @param	Size			The size of the font (in pixels essentially).
 	 * @param	Color			The color of the text in `0xRRGGBB` format.
 	 * @param	Alignment		The desired alignment
-	 * @param	BorderStyle		Which border style ot use
+	 * @param	BorderStyle		Which border style to use
 	 * @param	BorderColor 	Color for the border, `0xAARRGGBB` format
 	 * @param	EmbeddedFont	Whether this text field uses embedded fonts or not
 	 * @return	This `FlxText` instance (nice for chaining stuff together, if you're into that).
 	 */
 	public function setFormat(?Font:String, Size:Int = 8, Color:FlxColor = FlxColor.WHITE, ?Alignment:FlxTextAlign, 
-		?BorderStyle:FlxTextBorderStyle, BorderColor:FlxColor = FlxColor.TRANSPARENT, Embedded:Bool = true):FlxText
+		?BorderStyle:FlxTextBorderStyle, BorderColor:FlxColor = FlxColor.TRANSPARENT, EmbeddedFont:Bool = true):FlxText
 	{
 		BorderStyle = (BorderStyle == null) ? NONE : BorderStyle;
 		
-		if (Embedded)
+		if (EmbeddedFont)
 		{
 			font = Font;
 		}
@@ -1052,8 +1051,8 @@ class FlxTextFormat
 	
 	/**
 	 * @param   FontColor     Font color, in `0xRRGGBB` format. Inherits from the default format by default.
-	 * @param   Bold          Whether the text should be bold (must be suppported by the font). `false` by default.
-	 * @param   Italic        Whether the text should be in italics (must be suppported by the font). Only works on Flash. `false` by default.  
+	 * @param   Bold          Whether the text should be bold (must be supported by the font). `false` by default.
+	 * @param   Italic        Whether the text should be in italics (must be supported by the font). Only works on Flash. `false` by default.  
 	 * @param   BorderColor   Border color, in `0xAARRGGBB` format. By default, no border (`null` / transparent).
 	 */
 	public function new(?FontColor:FlxColor, ?Bold:Bool, ?Italic:Bool, ?BorderColor:FlxColor)
@@ -1091,7 +1090,8 @@ enum FlxTextBorderStyle
 {
 	NONE;
 	/**
-	 * A simple shadow to the lower-right
+	 * A simple shadow to the lower-right.
+	 * Use `FlxText.shadowOffset` for custom placement.
 	 */
 	SHADOW;
 	/**

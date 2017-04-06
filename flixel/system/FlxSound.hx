@@ -5,7 +5,6 @@ import flash.media.Sound;
 import flash.media.SoundChannel;
 import flash.media.SoundTransform;
 import flash.net.URLRequest;
-import flash.utils.ByteArray;
 import flixel.FlxBasic;
 import flixel.FlxG;
 import flixel.math.FlxMath;
@@ -14,6 +13,10 @@ import flixel.system.FlxAssets.FlxSoundAsset;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxStringUtil;
 import openfl.Assets;
+
+#if flash11
+import flash.utils.ByteArray;
+#end
 
 /**
  * This is the universal flixel sound object, used for streaming, music, and sound effects.
@@ -59,7 +62,7 @@ class FlxSound extends FlxBasic
 	 */
 	public var autoDestroy:Bool;
 	/**
-	 * Tracker for sound complete callback. If assigend, will be called 
+	 * Tracker for sound complete callback. If assigned, will be called 
 	 * each time when sound reaches its end. Works only on flash and desktop targets.
 	 */
 	public var onComplete:Void->Void;
@@ -87,6 +90,11 @@ class FlxSound extends FlxBasic
 	 */
 	public var time(get, set):Float;
 	/**
+	 * The length of the sound in milliseconds.
+	 * @since 4.2.0
+	 */
+	public var length(get, never):Float;
+	/**
 	 * The sound group this sound belongs to
 	 */
 	public var group(default, set):FlxSoundGroup;
@@ -96,10 +104,18 @@ class FlxSound extends FlxBasic
 	public var looped:Bool;
 	/**
 	 * In case of looping, the point (in milliseconds) from where to restart the sound when it loops back
+	 * @since 4.1.0
 	 */
-	public var loopTime:Float;
+	public var loopTime:Float = 0;
+	/**
+	 * At which point to stop playing the sound, in milliseconds.
+	 * If not set / `null`, the sound completes normally.
+	 * @since 4.2.0
+	 */
+	public var endTime:Null<Float>;
 	/**
 	 * The tween used to fade this sound's volume in and out (set via `fadeIn()` and `fadeOut()`)
+	 * @since 4.1.0
 	 */
 	public var fadeTween:FlxTween;
 	/**
@@ -126,6 +142,10 @@ class FlxSound extends FlxBasic
 	 * Internal tracker for sound channel position.
 	 */
 	private var _time:Float = 0;
+	/**
+	 * Internal tracker for sound length, so that length can still be obtained while a sound is paused, because _sound becomes null.
+	 */
+	private var _length:Float = 0;
 	#if (sys && openfl_legacy)
 	/**
 	 * Internal tracker for pitch.
@@ -178,6 +198,7 @@ class FlxSound extends FlxBasic
 		_volumeAdjust = 1.0;
 		looped = false;
 		loopTime = 0.0;
+		endTime = 0.0;
 		_target = null;
 		_radius = 0;
 		_proximityPan = false;
@@ -259,8 +280,11 @@ class FlxSound extends FlxBasic
 		{
 			amplitudeLeft = 0;
 			amplitudeRight = 0;
-			amplitude = 0;			
+			amplitude = 0;
 		}
+		
+		if (endTime != null && _time >= endTime) 
+			stopped();
 	}
 	
 	override public function kill():Void
@@ -303,12 +327,7 @@ class FlxSound extends FlxBasic
 		}
 		
 		// NOTE: can't pull ID3 info from embedded sound currently
-		looped = Looped; 
-		autoDestroy = AutoDestroy;
-		updateTransform();
-		exists = true;
-		onComplete = OnComplete;
-		return this;
+		return init(Looped, AutoDestroy, OnComplete);
 	}
 	
 	/**
@@ -327,12 +346,8 @@ class FlxSound extends FlxBasic
 		_sound = new Sound();
 		_sound.addEventListener(Event.ID3, gotID3);
 		_sound.load(new URLRequest(SoundURL));
-		looped = Looped;
-		autoDestroy = AutoDestroy;
-		updateTransform();
-		exists = true;
-		onComplete = OnComplete;
-		return this;
+
+		return init(Looped, AutoDestroy, OnComplete);
 	}
 	
 	#if flash11
@@ -352,14 +367,22 @@ class FlxSound extends FlxBasic
 		_sound = new Sound();
 		_sound.addEventListener(Event.ID3, gotID3);
 		_sound.loadCompressedDataFromByteArray(Bytes, Bytes.length);
+		
+		return init(Looped, AutoDestroy, OnComplete);
+	}
+	#end
+
+	private function init(Looped:Bool = false, AutoDestroy:Bool = false, ?OnComplete:Void->Void):FlxSound
+	{
 		looped = Looped;
 		autoDestroy = AutoDestroy;
 		updateTransform();
 		exists = true;
 		onComplete = OnComplete;
+		_length = (_sound == null) ? 0 : _sound.length;
+		endTime = _length;
 		return this;
 	}
-	#end
 	
 	/**
 	 * Call this function if you want this sound's volume to change
@@ -389,9 +412,11 @@ class FlxSound extends FlxBasic
 	 *                         Default value is false, meaning if the sound is already playing or was
 	 *                         paused when you call play(), it will continue playing from its current
 	 *                         position, NOT start again from the beginning.
-	 * @param   StartTime      At which point to start plaing the sound, in milliseconds
+	 * @param   StartTime      At which point to start playing the sound, in milliseconds.
+	 * @param   EndTime        At which point to stop playing the sound, in milliseconds.
+	 *                         If not set / `null`, the sound completes normally.
 	 */
-	public function play(ForceRestart:Bool = false, StartTime:Float = 0.0):FlxSound
+	public function play(ForceRestart:Bool = false, StartTime:Float = 0.0, ?EndTime:Float):FlxSound
 	{
 		if (!exists)
 			return this;
@@ -405,7 +430,8 @@ class FlxSound extends FlxBasic
 			resume();
 		else
 			startSound(StartTime);
-
+		
+		endTime = EndTime;
 		return this;
 	}
 	
@@ -511,9 +537,9 @@ class FlxSound extends FlxBasic
 	private function updateTransform():Void
 	{
 		_transform.volume =
-		#if FLX_SOUND_SYSTEM
+			#if FLX_SOUND_SYSTEM
 			(FlxG.sound.muted ? 0 : 1) * FlxG.sound.volume *
-		#end
+			#end
 			(group != null ? group.volume : 1) * _volume * _volumeAdjust;
 		
 		if (_channel != null)
@@ -551,7 +577,7 @@ class FlxSound extends FlxBasic
 	 * An internal helper function used to help Flash
 	 * clean up finished sounds or restart looped sounds.
 	 */
-	private function stopped(_):Void
+	private function stopped(?_):Void
 	{
 		if (onComplete != null)
 			onComplete();
@@ -559,7 +585,7 @@ class FlxSound extends FlxBasic
 		if (looped)
 		{
 			cleanup(false);
-			play(false, loopTime);
+			play(false, loopTime, endTime);
 		}
 		else
 			cleanup(autoDestroy);
@@ -699,12 +725,18 @@ class FlxSound extends FlxBasic
 		}
 		return _time = time;
 	}
+
+	private inline function get_length():Float
+	{
+		return _length;
+	}
 	
 	override public function toString():String
 	{
 		return FlxStringUtil.getDebugString([
 			LabelValuePair.weak("playing", playing),
 			LabelValuePair.weak("time", time),
+			LabelValuePair.weak("length", length),
 			LabelValuePair.weak("volume", volume)]);
 	}
 }

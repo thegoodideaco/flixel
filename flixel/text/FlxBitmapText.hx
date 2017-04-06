@@ -549,7 +549,6 @@ class FlxBitmapText extends FlxSprite
 			_lines = [_lines[0]];
 		}
 		
-		var line:String;
 		var numLines:Int = _lines.length;
 		for (i in 0...numLines)
 		{
@@ -1565,7 +1564,7 @@ class FlxBitmapText extends FlxSprite
 	{
 		if (lineSpacing != value)
 		{
-			lineSpacing = (value >= 0) ? value : -value;
+			lineSpacing = value;
 			pendingTextBitmapChange = true;
 		}
 		

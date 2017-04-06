@@ -3,9 +3,11 @@ package flixel.system.debug.console;
 #if FLX_DEBUG
 import flixel.FlxG;
 import flixel.FlxObject;
+import flixel.FlxCamera;
 import flixel.tweens.FlxTween;
 import flixel.math.FlxMath;
 import flixel.util.FlxStringUtil;
+import flixel.system.debug.FlxDebugger.FlxDebuggerLayout;
 using StringTools;
 
 class ConsoleCommands
@@ -55,9 +57,14 @@ class ConsoleCommands
 		console.registerClass(Type);
 
 		console.registerClass(FlxG);
+		console.registerClass(FlxObject);
 		console.registerClass(FlxSprite);
 		console.registerClass(FlxMath);
 		console.registerClass(FlxTween);
+		console.registerClass(FlxCamera);
+		
+		console.registerObject("FlxDebuggerLayout", FlxDebuggerLayout);
+		console.registerObject("selection", null);
 	}
 	
 	private function help(?Alias:String):String

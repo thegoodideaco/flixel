@@ -3,7 +3,6 @@ package flixel.system.debug.watch;
 import flixel.math.FlxMath;
 import flixel.system.FlxAssets;
 import flixel.system.debug.FlxDebugger.GraphicCloseButton;
-import flixel.system.debug.console.ConsoleUtil;
 import flixel.system.ui.FlxSystemButton;
 import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
@@ -13,6 +12,10 @@ import openfl.text.TextField;
 import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
 using flixel.util.FlxStringUtil;
+
+#if hscript
+import flixel.system.debug.console.ConsoleUtil;
+#end
 
 class WatchEntry extends Sprite implements IFlxDestroyable
 {
@@ -37,8 +40,9 @@ class WatchEntry extends Sprite implements IFlxDestroyable
 
 		defaultFormat = new TextFormat(FlxAssets.FONT_DEBUGGER, 12, getTextColor());
 		nameText = initTextField(DebuggerUtil.createTextField());
+		var expectedType = Type.typeof(getValue());
 		valueText = initTextField(DebuggerUtil.initTextField(
-			new EditableTextField(data.match(FIELD(_, _)), defaultFormat, submitValue)));
+			new EditableTextField(data.match(FIELD(_, _)), defaultFormat, submitValue, expectedType)));
 
 		updateName();
 		
@@ -53,7 +57,7 @@ class WatchEntry extends Sprite implements IFlxDestroyable
 		{
 			case FIELD(_, _): 0xFFFFFF;
 			case QUICK(_): 0xA5F1ED;
-			case EXPRESSION(_): 0xC4FE83;
+			case EXPRESSION(_, _): 0xC4FE83;
 		}
 	}
 	
@@ -89,7 +93,7 @@ class WatchEntry extends Sprite implements IFlxDestroyable
 		{
 			case FIELD(object, field):
 				setNameText(object.getClassName(true) + "." + field);
-			case EXPRESSION(expression):
+			case EXPRESSION(expression, _):
 				setNameText(expression);
 			case QUICK(_):
 		}
@@ -102,28 +106,32 @@ class WatchEntry extends Sprite implements IFlxDestroyable
 		nameText.width = Math.min(currentWidth, MAX_NAME_WIDTH);
 	}
 	
-	private function getValue():String
+	private function getValue():Dynamic
 	{
-		var value:Dynamic = switch (data)
+		return switch (data)
 		{
 			case FIELD(object, field):
 				Reflect.getProperty(object, field);
-			case EXPRESSION(expression):
+			case EXPRESSION(_, parsedExpr):
 				#if hscript
-				ConsoleUtil.runCommand(expression);
+				ConsoleUtil.runExpr(parsedExpr);
 				#else
 				"hscript is not installed";
 				#end
 			case QUICK(value):
 				value;
-		};
-		
+		}
+	}
+
+	private function getFormattedValue():String
+	{
+		var value:Dynamic = getValue();
 		if (Std.is(value, Float))
 			value = FlxMath.roundDecimal(cast value, FlxG.debugger.precision);
 		return Std.string(value);
 	}
 	
-	private function submitValue(value:String):Void
+	private function submitValue(value:Dynamic):Void
 	{
 		switch (data)
 		{
@@ -136,7 +144,7 @@ class WatchEntry extends Sprite implements IFlxDestroyable
 	public function updateValue()
 	{
 		if (!valueText.isEditing)
-			valueText.text = getValue();
+			valueText.text = getFormattedValue();
 	}
 	
 	public function getNameWidth():Float

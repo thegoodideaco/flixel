@@ -1,16 +1,16 @@
 package flixel.system.frontEnds;
 
-import flixel.math.FlxPoint;
-using flixel.util.FlxArrayUtil;
-using flixel.util.FlxStringUtil;
-
 #if js
 import js.Browser;
+import flixel.math.FlxPoint;
+using flixel.util.FlxStringUtil;
 
 class HTML5FrontEnd
 {
 	public var browser(default, null):FlxBrowser;
+	/** @since 4.2.0 */
 	public var platform(default, null):FlxPlatform;
+	/** @since 4.2.0 */
 	public var onMobile(default, null):Bool;
 	public var browserWidth(get, never):Int;
 	public var browserHeight(get, never):Int;

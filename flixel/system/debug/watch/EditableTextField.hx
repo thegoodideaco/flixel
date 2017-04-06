@@ -9,23 +9,26 @@ import openfl.text.TextField;
 import openfl.text.TextFieldType;
 import openfl.text.TextFormat;
 import openfl.ui.Keyboard;
+import Type.ValueType;
 
 class EditableTextField extends TextField implements IFlxDestroyable
 {
 	public var isEditing(default, null):Bool;
 
 	private var allowEditing:Bool;
-	private var submitValue:String->Void;
-	
+	private var submitValue:Dynamic->Void;
+	private var expectedType:ValueType;
+
 	private var defaultFormat:TextFormat;
 	private var editFormat:TextFormat;
 	
-	public function new(allowEditing:Bool, defaultFormat:TextFormat, submitValue:Dynamic->Void) 
+	public function new(allowEditing:Bool, defaultFormat:TextFormat, submitValue:Dynamic->Void, expectedType:ValueType)
 	{
 		super();
 		this.allowEditing = allowEditing;
 		this.submitValue = submitValue;
 		this.defaultFormat = defaultFormat;
+		this.expectedType = expectedType;
 		
 		if (allowEditing)
 		{
@@ -72,28 +75,60 @@ class EditableTextField extends TextField implements IFlxDestroyable
 			modifier = 0.1;
 		if (e.shiftKey)
 			modifier = 10.0;
-		
+
 		switch (e.keyCode)
 		{
-			case Keyboard.UP:
-				if (!modifyNumericValue(modifier))
-					setSelection(0, 0);
-			case Keyboard.DOWN:
-				if (!modifyNumericValue(-modifier))
-					setSelection(text.length, text.length);
+			case Keyboard.UP: cycleValue(modifier, 0);
+			case Keyboard.DOWN: cycleValue(-modifier, text.length);
 		}
 	}
+
+	private function cycleValue(modifier:Float, selection:Int):Void
+	{
+		switch (expectedType)
+		{
+			case TInt | TFloat:
+				cycleNumericValue(modifier);
+				selectEnd();
+			case TBool:
+				text = if (text == "true") "false" else "true";
+				selectEnd();
+			case TEnum(e):
+				cycleEnumValue(e, FlxMath.signOf(modifier));
+				selectEnd();
+			case _:
+				setSelection(selection, selection);
+		}
+	}
+
+	private function selectEnd():Void
+	{
+		setSelection(text.length, text.length);
+	}
 	
-	private function modifyNumericValue(modifier:Float):Bool
+	private function cycleNumericValue(modifier:Float):Void
 	{
 		var value:Float = Std.parseFloat(text);
 		if (Math.isNaN(value))
-			return false;
+			return;
 
 		value += modifier;
 		value = FlxMath.roundDecimal(value, FlxG.debugger.precision);
 		text = Std.string(value);
-		return true;
+	}
+
+	private function cycleEnumValue(e:Enum<Dynamic>, modifier:Int):Void
+	{
+		var values = e.getConstructors();
+		var index = values.indexOf(text);
+		if (index == -1)
+			index = 0;
+		else
+		{
+			index += modifier;
+			index = Std.int(FlxMath.wrap(index, 0, values.length - 1));
+		}
+		text = Std.string(values[index]);
 	}
 
 	private function onFocusLost(_)
@@ -101,11 +136,25 @@ class EditableTextField extends TextField implements IFlxDestroyable
 		setIsEditing(false);
 	}
 
-	private function submit():Void
+	public function submit():Void
 	{
+		var value:Dynamic = switch (expectedType)
+		{
+			#if neko
+			case TInt: Std.parseInt(text);
+			case TFloat: Std.parseFloat(text);
+			#end
+			case TBool if (text == "true"): true;
+			case TBool if (text == "false"): false;
+			case TEnum(e):
+				try Type.createEnum(e, text)
+				catch (_:Dynamic) null;
+			case _: text;
+		}
+
 		try
 		{
-			submitValue(text);
+			submitValue(value);
 		}
 		catch (e:Dynamic) {}
 		

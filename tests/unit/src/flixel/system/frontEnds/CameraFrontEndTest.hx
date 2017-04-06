@@ -3,18 +3,18 @@ package flixel.system.frontEnds;
 import flixel.FlxCamera;
 import massive.munit.Assert;
 
-class CameraFrontEndTest
+class CameraFrontEndTest extends FlxTest
 {
 	@Test
 	public function testCameraAdded()
 	{
 		var success = false;
-		var newCamara = new FlxCamera();
+		var newCamera = new FlxCamera();
 		FlxG.cameras.cameraAdded.add(function(camera)
 		{
-			success = camera == newCamara;
+			success = camera == newCamera;
 		});
-		FlxG.cameras.add(newCamara);
+		FlxG.cameras.add(newCamera);
 		Assert.isTrue(success);
 		
 		FlxG.cameras.cameraAdded.removeAll();
@@ -49,5 +49,21 @@ class CameraFrontEndTest
 		Assert.isTrue(success);
 		
 		FlxG.cameras.cameraResized.removeAll();
+	}
+
+	@Test // #2016
+	function testResetRemoveAllCameras()
+	{
+		Assert.areEqual(1, FlxG.cameras.list.length);
+
+		FlxG.cameras.add(new FlxCamera());
+		Assert.areEqual(2, FlxG.cameras.list.length);
+
+		var calls = 0;
+		FlxG.cameras.cameraRemoved.add(function(_) calls++);
+		FlxG.cameras.reset();
+		Assert.areEqual(2, calls);
+
+		FlxG.cameras.cameraRemoved.removeAll();
 	}
 }

@@ -19,6 +19,9 @@
 	"exclude": {
 		"all": [
 			"TestSuite"
+		],
+		"AvoidStarImport": [
+			"flixel.math.FlxRandomTest"
 		]
 	},
 	"checks": [
@@ -187,6 +190,9 @@
 					"haxe.macro.Expr"
 				]
 			}
+		},
+		{
+			"type": "PublicAccessor"
 		}
 	]
 }

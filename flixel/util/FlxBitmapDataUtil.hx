@@ -10,7 +10,7 @@ import flixel.math.FlxRect;
 
 /**
  * Just a collection of BitmapData utility methods.
- * Just for crossplatform stuff, since not all methods are implemented across all targets.
+ * Just for cross-platform stuff, since not all methods are implemented across all targets.
  */
 class FlxBitmapDataUtil
 {
@@ -243,7 +243,7 @@ class FlxBitmapDataUtil
 	}
 	
 	/**
-	 * Replaces all bitmapData's pixels with specified color with newColor pixels. 
+	 * Replaces all BitmapData's pixels with specified color with newColor pixels. 
 	 * WARNING: very expensive (especially on big graphics) as it iterates over every single pixel.
 	 * 
 	 * @param	bitmapData			BitmapData to change
@@ -395,15 +395,15 @@ class FlxBitmapDataUtil
 	 * 
 	 * @param	bitmapData 			image with spaces between tiles to fill with border pixels
 	 * @param	frameWidth			tile width
-	 * @param	frameHeight			tile heigth
+	 * @param	frameHeight			tile height
 	 * @param	spaceX				horizontal spacing between tiles
 	 * @param	spaceY				vertical spacing between tiles
 	 * @param	borderX				how many times to copy border of tiles on horizontal axis.
 	 * @param	borderY				how many times to copy border of tiles on vertical axis.
 	 * @param	horizontalFrames	how many columns of tiles on provided image.
 	 * @param	verticalFrames		how many rows of tiles on provided image.
-	 * 
 	 * @return	Modified spritesheet with copied pixels around tile images.
+	 * @since   4.1.0
 	 */
 	public static function copyBorderPixels(bitmapData:BitmapData, frameWidth:Int, frameHeight:Int, spaceX:Int, spaceY:Int, borderX:Int, borderY:Int, horizontalFrames:Int, verticalFrames:Int):BitmapData
 	{
@@ -462,7 +462,7 @@ class FlxBitmapDataUtil
 	 * @param	brush			The image you want to rotate and stamp.
 	 * @param	rotations		The number of rotation frames the final sprite should have. For small sprites this can be quite a large number (360 even) without any problems.
 	 * @param	antiAliasing	Whether to use high quality rotations when creating the graphic.  Default is false.
-	 * @param	autoBuffer		Whether to automatically increase the image size to accomodate rotated corners.  Default is false.  Will create frames that are 150% larger on each axis than the original frame or graphic.
+	 * @param	autoBuffer		Whether to automatically increase the image size to accommodate rotated corners.  Default is false.  Will create frames that are 150% larger on each axis than the original frame or graphic.
 	 * @return	Created BitmapData with stamped prerotations on it.
 	 */
 	public static function generateRotations(brush:BitmapData, rotations:Int = 16, antiAliasing:Bool = false, autoBuffer:Bool = false):BitmapData
